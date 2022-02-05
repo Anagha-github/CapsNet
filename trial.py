@@ -1,9 +1,13 @@
+
+
 #this program workss!
 
 from __future__ import division, print_function, unicode_literals #To support both Python 2 and Python 3
-
+from PIL import Image
 import matplotlib
 import matplotlib.pyplot as plt #To plot pretty figures
+import cv2
+# import cv2
 
 import tensorflow as tf
 print(tf.__version__)
@@ -14,9 +18,53 @@ from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
 import numpy as np
+#from numpy import asarray
+
 np.random.seed(42)
 tf.random.set_seed(45) #set the random seeds so that this notebook always produces the same output
 
+####################################################
+from PIL import Image, ImageFilter
+
+
+def imageprepare(argv):
+    """
+    This function returns the pixel values.
+    The imput is a png file location.
+    """
+    im = Image.open(argv).convert('L')
+    width = float(im.size[0])
+    height = float(im.size[1])
+    newImage = Image.new('L', (28, 28), (255))  # creates white canvas of 28x28 pixels
+
+    if width > height:  # check which dimension is bigger
+        # Width is bigger. Width becomes 20 pixels.
+        nheight = int(round((20.0 / width * height), 0))  # resize height according to ratio width
+        if (nheight == 0):  # rare case but minimum is 1 pixel
+            nheight = 1
+            # resize and sharpen
+        img = im.resize((20, nheight), Image.ANTIALIAS).filter(ImageFilter.SHARPEN)
+        wtop = int(round(((28 - nheight) / 2), 0))  # calculate horizontal position
+        newImage.paste(img, (4, wtop))  # paste resized image on white canvas
+    else:
+        # Height is bigger. Heigth becomes 20 pixels.
+        nwidth = int(round((20.0 / height * width), 0))  # resize width according to ratio height
+        if (nwidth == 0):  # rare case but minimum is 1 pixel
+            nwidth = 1
+            # resize and sharpen
+        img = im.resize((nwidth, 20), Image.ANTIALIAS).filter(ImageFilter.SHARPEN)
+        wleft = int(round(((28 - nwidth) / 2), 0))  # caculate vertical pozition
+        newImage.paste(img, (wleft, 4))  # paste resized image on white canvas
+
+    # newImage.save("sample.png
+
+    tv = list(newImage.getdata())  # get pixel values
+
+    # normalize pixels to 0 and 1. 0 is pure white, 1 is pure black.
+    tva = [(255 - x) * 1.0 / 255.0 for x in tv]
+    print(tva)
+    return tva
+#####################################################################
 #Load MNIST data
 
 from tensorflow.keras.datasets import mnist
@@ -26,21 +74,6 @@ X_train = X_train.reshape(-1, 28, 28, 1).astype('float32') / 255.
 X_test = X_test.reshape(-1, 28, 28, 1).astype('float32') / 255.
 #Y_train = to_categorical(Y_train.astype('float32'))
 #Y_test = to_categorical(Y_test.astype('float32'))
-
-print(X_train.shape)
-
-#what these hand-written digit images look like
-n_samples = 5
-plt.figure(figsize=(n_samples * 2, 3))
-for index in range(n_samples):
-    plt.subplot(1, n_samples, index + 1)
-    sample_image = X_train[index].reshape(28, 28)
-    plt.imshow(sample_image, cmap="binary")
-    plt.axis("off")
-plt.show()
-
-#the corresponding labels
-print(Y_train[:n_samples])
 
 tf.compat.v1.disable_eager_execution()
 X = tf.compat.v1.placeholder(shape=[None, 28, 28, 1], dtype=tf.float32, name="X")
@@ -73,7 +106,6 @@ conv2 = tf.compat.v1.layers.conv2d(conv1, name="conv2", **conv2_params)
 
 caps1_raw = tf.reshape(conv2, [-1, caps1_n_caps, caps1_n_dims],
                        name="caps1_raw")
-#When |s|=0, derivative will be undefined. hence before squashing, add a small epslion. 
 
 def squash(s, axis=-1, epsilon=1e-7, name=None):
     with tf.name_scope(name):
@@ -289,17 +321,8 @@ training_op = optimizer.minimize(loss, name="training_op")
 init = tf.compat.v1.global_variables_initializer()
 saver = tf.compat.v1.train.Saver()
 
-#Training
-print(len(X_train))
-#print(X_train[0:0+50])
-
 from sklearn.model_selection import train_test_split
 X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.08, random_state=42)
-
-print(len(X_train))
-print(len(X_val))
-print(X_val.shape)
-print(Y_val.shape)
 
 n_epochs = 1
 batch_size = 50
@@ -308,58 +331,124 @@ restore_checkpoint = True
 n_iterations_per_epoch = len(X_train) // batch_size
 n_iterations_validation = len(X_val) // batch_size
 best_loss_val = np.infty
+
 checkpoint_path = "./my_capsule_network"
 
-with tf.compat.v1.Session() as sess:
-    if restore_checkpoint and tf.compat.v1.train.checkpoint_exists(checkpoint_path):
+#Predictions
+
+################################ IMAGE PROCESSING #####################
+image = cv2.imread(uploaded_file)
+# image = cv2.imread('./Fig_1.jfif')
+grey = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2GRAY)
+ret, thresh = cv2.threshold(grey.copy(), 75, 255, cv2.THRESH_BINARY_INV)
+contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+preprocessed_digits = []
+for c in contours:
+    x,ynew,w,h = cv2.boundingRect(c)
+    
+    # Creating a rectangle around the digit in the original image (for displaying the digits fetched via contours)
+    cv2.rectangle(image, (x,ynew), (x+w, ynew+h), color=(0, 255, 0), thickness=2)
+    
+    # Cropping out the digit from the image corresponding to the current contours in the for loop
+    digit = thresh[ynew:ynew+h, x:x+w]
+    
+    # Resizing that digit to (18, 18)
+    resized_digit = cv2.resize(digit, (18,18))
+    
+    # Padding the digit with 5 pixels of black color (zeros) in each side to finally produce the image of (28, 28)
+    padded_digit = np.pad(resized_digit, ((5,5),(5,5)), "constant", constant_values=0)
+    
+    # Adding the preprocessed digit to the list of preprocessed digits
+    preprocessed_digits.append(padded_digit)
+print("\n\n\n----------------Contoured Image--------------------")
+plt.imshow(image, cmap="gray")
+plt.show()
+    
+inp = np.array(preprocessed_digits)
+###############################
+
+sample_images = []
+i= 0
+
+
+y_pred_value_array = []
+for digit in preprocessed_digits:
+    sample_image = digit.reshape([-1, 28, 28, 1]).astype('float32')
+    with tf.compat.v1.Session() as sess:
         saver.restore(sess, checkpoint_path)
-    else:
-        init.run()
+        caps2_output_value, decoder_output_value, y_pred_value = sess.run(
+                [caps2_output, decoder_output, y_pred],
+                feed_dict={X: sample_image,
+                        y: np.array([], dtype=np.int64)})
+    
+        # print(sample_images.shape)
 
-    for epoch in range(n_epochs):
-        b0 = 0
-        c0 = 0
-        for iteration in range(1, n_iterations_per_epoch + 1):
-            X_batch, y_batch = X_train[b0:b0+batch_size], Y_train[b0:b0+batch_size]
-            # Run the training operation and measure the loss:
-            _, loss_train = sess.run(
-                [training_op, loss],
-                feed_dict={X: X_batch.reshape([-1, 28, 28, 1]),
-                           y: y_batch,
-                           mask_with_labels: True})
-            print("\rIteration: {}/{} ({:.1f}%)  Loss: {:.5f}".format(
-                      iteration, n_iterations_per_epoch,
-                      iteration * 100 / n_iterations_per_epoch,
-                      loss_train),
-                  end="")
-            b0+=batch_size
+        # print(decoder_output_value.reshape([-1, 28, 28]).shape)
 
-        # At the end of each epoch,
-        # measure the validation loss and accuracy:
-        loss_vals = []
-        acc_vals = []
-        for iteration in range(1, n_iterations_validation + 1):
-            X_batch, y_batch = X_val[c0:c0+batch_size], Y_val[c0:c0+batch_size]
-            loss_val, acc_val = sess.run(
-                    [loss, accuracy],
-                    feed_dict={X: X_batch.reshape([-1, 28, 28, 1]),
-                               y: y_batch})
-            loss_vals.append(loss_val)
-            acc_vals.append(acc_val)
-            print("\rEvaluating the model: {}/{} ({:.1f}%)".format(
-                      iteration, n_iterations_validation,
-                      iteration * 100 / n_iterations_validation),
-                  end=" " * 10)
-        loss_val = np.mean(loss_vals)
-        acc_val = np.mean(acc_vals)
-        print("\rEpoch: {}  Val accuracy: {:.4f}%  Loss: {:.6f}{}".format(
-            epoch + 1, acc_val * 100, loss_val,
-            " (improved)" if loss_val < best_loss_val else ""))
+        sample_image = sample_image.reshape(-1, 28, 28)
+        reconstructions = decoder_output_value.reshape([-1, 28, 28])
 
-        # And save the model if it improved:
-        if loss_val < best_loss_val:
-            save_path = saver.save(sess, checkpoint_path)
-            best_loss_val = loss_val
+        plt.imshow(digit, cmap="binary")
+        plt.title("Predicted:" + str(y_pred_value))
+        plt.show()
+        
+        # plt.imshow(digit, cmap="binary")
+        # # plt.title("Label:" + str(Y_test[index]))
+        # plt.axis("off")
+
+        # plt.show()
+
+        # plt.figure(figsize=(n_samples * 2, 3))
+
+        # plt.subplot(1, n_samples, i + 1)
+        # plt.title("Predicted:" + str(y_pred_value[0]))
+        # #   plt.imshow(reconstructions[0], cmap="binary")
+        # plt.axis("off")
+        # plt.show()
+        #i=i+1
+        y_pred_value_array.append(y_pred_value)
+print(y_pred_value_array) 
 
 
+    
+
+# #Interpreting the Output Vectors
+
+# print(caps2_output_value.shape)
+
+# def tweak_pose_parameters(output_vectors, min=-0.5, max=0.5, n_steps=11):
+#     steps = np.linspace(min, max, n_steps) # -0.25, -0.15, ..., +0.25
+#     pose_parameters = np.arange(caps2_n_dims) # 0, 1, ..., 15
+#     tweaks = np.zeros([caps2_n_dims, n_steps, 1, 1, 1, caps2_n_dims, 1])
+#     tweaks[pose_parameters, :, 0, 0, 0, pose_parameters, 0] = steps
+#     output_vectors_expanded = output_vectors[np.newaxis, np.newaxis]
+#     return tweaks + output_vectors_expanded
+# n_steps = 11
+
+# tweaked_vectors = tweak_pose_parameters(caps2_output_value, n_steps=n_steps)
+# tweaked_vectors_reshaped = tweaked_vectors.reshape(
+#     [-1, 1, caps2_n_caps, caps2_n_dims, 1])
+
+# tweak_labels = np.tile(Y_test[:n_samples], caps2_n_dims * n_steps)
+
+# with tf.compat.v1.Session() as sess:
+#     saver.restore(sess, checkpoint_path)
+#     decoder_output_value = sess.run(
+#             decoder_output,
+#             feed_dict={caps2_output: tweaked_vectors_reshaped,
+#                        mask_with_labels: True,
+#                        y: tweak_labels})
+
+# tweak_reconstructions = decoder_output_value.reshape(
+#         [caps2_n_dims, n_steps, n_samples, 28, 28])
+
+# for dim in range(3):
+#     print("Tweaking output dimension #{}".format(dim))
+#     plt.figure(figsize=(n_steps / 1.2, n_samples / 1.5))
+#     for row in range(n_samples):
+#         for col in range(n_steps):
+#             plt.subplot(n_samples, n_steps, row * n_steps + col + 1)
+#             plt.imshow(tweak_reconstructions[dim, col, row], cmap="binary")
+#             plt.axis("off")
+#     plt.show()
 
