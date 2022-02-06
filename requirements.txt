@@ -75,7 +75,6 @@ multimethod==1.6
 munkres==1.1.4
 murmurhash==1.0.6
 mypy-extensions==0.4.3
-navigator-updater
 nltk==3.6.5
 numpy==1.19.5
 oauthlib==3.2.0
