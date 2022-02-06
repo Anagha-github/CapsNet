@@ -1,6 +1,6 @@
 streamlit
 sip
-numpy==1.19.3
+numpy==1.19.5
 tables==3.6.1
 tabulate==0.8.9
 tangled-up-in-unicode==0.1.0
