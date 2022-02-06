@@ -2,7 +2,7 @@ streamlit
 tables==3.6.1
 tabulate==0.8.9
 tangled-up-in-unicode==0.1.0
-TBB==0.2
+TBB
 tenacity==8.0.1
 terminado==0.9.4
 textblob==0.17.1
