@@ -119,7 +119,7 @@ opencv-contrib-python==4.5.5.62
 opencv-python==4.5.5.62
 pandas-profiling==3.1.0
 parso==0.8.2
-pathlib==1.0.1
+pathlib
 pathspec==0.7.0
 patsy==0.5.2
 pep8==1.7.1
