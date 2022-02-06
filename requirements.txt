@@ -24,7 +24,7 @@ colorama==0.4.4
 colorlover==0.3.0
 comtypes==1.1.10
 conda
-conda-build==3.21.6
+conda-build
 conda-verify==3.4.2
 cufflinks==0.17.3
 cycler==0.10.0
