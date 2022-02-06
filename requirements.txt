@@ -25,7 +25,7 @@ colorlover==0.3.0
 comtypes==1.1.10
 conda
 conda-build
-conda-verify==3.4.2
+conda-verify
 cufflinks==0.17.3
 cycler==0.10.0
 cymem==2.0.6
