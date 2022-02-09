@@ -1,7 +1,4 @@
 
-
-#this program workss!
-
 from __future__ import division, print_function, unicode_literals #To support both Python 2 and Python 3
 from PIL import Image
 import matplotlib
@@ -12,18 +9,14 @@ import cv2
 import tensorflow as tf
 print(tf.__version__)
 
-#Reproducibility
 from tensorflow.python.framework import ops 
-#Let's reset the default graph, in case you re-run this notebook without restarting the kernel
 ops.reset_default_graph()
 
 import numpy as np
 #from numpy import asarray
 
 np.random.seed(42)
-tf.random.set_seed(45) #set the random seeds so that this notebook always produces the same output
-
-####################################################
+tf.random.set_seed(45)
 from PIL import Image, ImageFilter
 
 def predict_image(preprocessed_digits):
@@ -73,19 +66,12 @@ def predict_image(preprocessed_digits):
     (X_train, Y_train), (X_test, Y_test) = mnist.load_data()
     X_train = X_train.reshape(-1, 28, 28, 1).astype('float32') / 255.
     X_test = X_test.reshape(-1, 28, 28, 1).astype('float32') / 255.
-    #Y_train = to_categorical(Y_train.astype('float32'))
-    #Y_test = to_categorical(Y_test.astype('float32'))
-
+    
     tf.compat.v1.disable_eager_execution()
     X = tf.compat.v1.placeholder(shape=[None, 28, 28, 1], dtype=tf.float32, name="X")
-    #creating a placeholder for the input images (28×28 pixels, 1 color channel = grayscale)     
-
-    #Primary Capsules
-    #The first layer will be composed of 32 maps of 6×6 capsules each, where each capsule will output an 8D activation vector
     caps1_n_maps = 32
     caps1_n_caps = caps1_n_maps * 6 * 6  # 1152 primary capsules
     caps1_n_dims = 8
-    #To compute their outputs, we first apply two regular convolutional layers
     conv1_params = {
         "filters": 256,
         "kernel_size": 9,
@@ -117,12 +103,9 @@ def predict_image(preprocessed_digits):
             unit_vector = s / safe_norm
             return squash_factor * unit_vector
 
-    #apply this function to get the output  ui  of each primary capsules  i
     caps1_output = squash(caps1_raw, name="caps1_output")
 
-    #Digit Capsules
-    #compute the predicted output vectors (one for each primary / digit capsule pair). Then we can run the routing by agreement algorithm
-    #The digit capsule layer contains 10 capsules (one for each digit) of 16 dimensions each
+
     caps2_n_caps = 10
     caps2_n_dims = 16
 
@@ -134,13 +117,7 @@ def predict_image(preprocessed_digits):
     W = tf.Variable(W_init, name="W")
 
     batch_size = tf.shape(X)[0]
-    W_tiled = tf.tile(W, [batch_size, 1, 1, 1, 1], name="W_tiled") #create the first array by repeating W once per instance
-
-    #That's it! On to the second array, now. As discussed earlier, we need to create an array of shape 
-    # (batch size, 1152, 10, 8, 1), containing the output of the first layer capsules, repeated 10 times
-    # (once per digit, along the third dimension, which is axis=2). The caps1_output array has a shape of 
-    # (batch size, 1152, 8), so we first need to expand it twice, to get an array of shape (batch size, 
-    # 1152, 1, 8, 1), then we can repeat it 10 times along the third dimension:
+    W_tiled = tf.tile(W, [batch_size, 1, 1, 1, 1], name="W_tiled") 
     caps1_output_expanded = tf.expand_dims(caps1_output, -1,
                                         name="caps1_output_expanded")
     caps1_output_tile = tf.expand_dims(caps1_output_expanded, 2,
@@ -335,40 +312,6 @@ def predict_image(preprocessed_digits):
 
     checkpoint_path = "./my_capsule_network"
 
-    #Predictions
-
-    ################################ IMAGE PROCESSING #####################
-    # def image_capture(uploaded_file):
-    #     image = cv2.imread(uploaded_file)
-    #     # image = cv2.imread('./Fig_1.jfif')
-    #     grey = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2GRAY)
-    #     ret, thresh = cv2.threshold(grey.copy(), 75, 255, cv2.THRESH_BINARY_INV)
-    #     contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    #     preprocessed_digits = []
-    #     for c in contours:
-    #         x,ynew,w,h = cv2.boundingRect(c)
-            
-    #         # Creating a rectangle around the digit in the original image (for displaying the digits fetched via contours)
-    #         cv2.rectangle(image, (x,ynew), (x+w, ynew+h), color=(0, 255, 0), thickness=2)
-            
-    #         # Cropping out the digit from the image corresponding to the current contours in the for loop
-    #         digit = thresh[ynew:ynew+h, x:x+w]
-            
-    #         # Resizing that digit to (18, 18)
-    #         resized_digit = cv2.resize(digit, (18,18))
-            
-    #         # Padding the digit with 5 pixels of black color (zeros) in each side to finally produce the image of (28, 28)
-    #         padded_digit = np.pad(resized_digit, ((5,5),(5,5)), "constant", constant_values=0)
-            
-    #         # Adding the preprocessed digit to the list of preprocessed digits
-    #         preprocessed_digits.append(padded_digit)
-    #     print("\n\n\n----------------Contoured Image--------------------")
-    #     plt.imshow(image, cmap="gray")
-    #     plt.show()
-            
-    #     inp = np.array(preprocessed_digits)
-    ###############################
-
     sample_images = []
     i= 0
 
@@ -384,9 +327,7 @@ def predict_image(preprocessed_digits):
                     feed_dict={X: sample_image,
                             y: np.array([], dtype=np.int64)})
         
-            # print(sample_images.shape)
-
-            # print(decoder_output_value.reshape([-1, 28, 28]).shape)
+            
 
             sample_image = sample_image.reshape(-1, 28, 28)
             reconstructions = decoder_output_value.reshape([-1, 28, 28])
@@ -395,65 +336,7 @@ def predict_image(preprocessed_digits):
             plt.title("Predicted:" + str(y_pred_value))
             plt.show()
             
-            # plt.imshow(digit, cmap="binary")
-            # # plt.title("Label:" + str(Y_test[index]))
-            # plt.axis("off")
-
-            # plt.show()
-
-            # plt.figure(figsize=(n_samples * 2, 3))
-
-            # plt.subplot(1, n_samples, i + 1)
-            # plt.title("Predicted:" + str(y_pred_value[0]))
-            # #   plt.imshow(reconstructions[0], cmap="binary")
-            # plt.axis("off")
-            # plt.show()
-            #i=i+1
-            # digit_array.append(digit)
+            
             y_pred_value_array.append(y_pred_value)
     print(y_pred_value_array) 
     return y_pred_value_array
-
-
-        
-
-    # #Interpreting the Output Vectors
-
-    # print(caps2_output_value.shape)
-
-    # def tweak_pose_parameters(output_vectors, min=-0.5, max=0.5, n_steps=11):
-    #     steps = np.linspace(min, max, n_steps) # -0.25, -0.15, ..., +0.25
-    #     pose_parameters = np.arange(caps2_n_dims) # 0, 1, ..., 15
-    #     tweaks = np.zeros([caps2_n_dims, n_steps, 1, 1, 1, caps2_n_dims, 1])
-    #     tweaks[pose_parameters, :, 0, 0, 0, pose_parameters, 0] = steps
-    #     output_vectors_expanded = output_vectors[np.newaxis, np.newaxis]
-    #     return tweaks + output_vectors_expanded
-    # n_steps = 11
-
-    # tweaked_vectors = tweak_pose_parameters(caps2_output_value, n_steps=n_steps)
-    # tweaked_vectors_reshaped = tweaked_vectors.reshape(
-    #     [-1, 1, caps2_n_caps, caps2_n_dims, 1])
-
-    # tweak_labels = np.tile(Y_test[:n_samples], caps2_n_dims * n_steps)
-
-    # with tf.compat.v1.Session() as sess:
-    #     saver.restore(sess, checkpoint_path)
-    #     decoder_output_value = sess.run(
-    #             decoder_output,
-    #             feed_dict={caps2_output: tweaked_vectors_reshaped,
-    #                        mask_with_labels: True,
-    #                        y: tweak_labels})
-
-    # tweak_reconstructions = decoder_output_value.reshape(
-    #         [caps2_n_dims, n_steps, n_samples, 28, 28])
-
-    # for dim in range(3):
-    #     print("Tweaking output dimension #{}".format(dim))
-    #     plt.figure(figsize=(n_steps / 1.2, n_samples / 1.5))
-    #     for row in range(n_samples):
-    #         for col in range(n_steps):
-    #             plt.subplot(n_samples, n_steps, row * n_steps + col + 1)
-    #             plt.imshow(tweak_reconstructions[dim, col, row], cmap="binary")
-    #             plt.axis("off")
-    #     plt.show()
-

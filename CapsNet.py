@@ -1,21 +1,18 @@
-#this program workss!
-
 from __future__ import division, print_function, unicode_literals #To support both Python 2 and Python 3
 
 import matplotlib
-import matplotlib.pyplot as plt #To plot pretty figures
+import matplotlib.pyplot as plt 
 
 import tensorflow as tf
 print(tf.__version__)
 
 #Reproducibility
 from tensorflow.python.framework import ops 
-#Let's reset the default graph, in case you re-run this notebook without restarting the kernel
 ops.reset_default_graph()
 
 import numpy as np
 np.random.seed(42)
-tf.random.set_seed(45) #set the random seeds so that this notebook always produces the same output
+tf.random.set_seed(45) 
 
 #Load MNIST data
 
@@ -24,12 +21,9 @@ from tensorflow.keras.utils import to_categorical
 (X_train, Y_train), (X_test, Y_test) = mnist.load_data()
 X_train = X_train.reshape(-1, 28, 28, 1).astype('float32') / 255.
 X_test = X_test.reshape(-1, 28, 28, 1).astype('float32') / 255.
-#Y_train = to_categorical(Y_train.astype('float32'))
-#Y_test = to_categorical(Y_test.astype('float32'))
 
 print(X_train.shape)
 
-#what these hand-written digit images look like
 n_samples = 5
 plt.figure(figsize=(n_samples * 2, 3))
 for index in range(n_samples):
@@ -47,7 +41,7 @@ X = tf.compat.v1.placeholder(shape=[None, 28, 28, 1], dtype=tf.float32, name="X"
 #creating a placeholder for the input images (28×28 pixels, 1 color channel = grayscale)     
 
 #Primary Capsules
-#The first layer will be composed of 32 maps of 6×6 capsules each, where each capsule will output an 8D activation vector
+#The first layer will be composed of 32 maps of 6×6 capsules each, where each capsule will output an 8Dimension activation vector
 caps1_n_maps = 32
 caps1_n_caps = caps1_n_maps * 6 * 6  # 1152 primary capsules
 caps1_n_dims = 8
@@ -84,11 +78,11 @@ def squash(s, axis=-1, epsilon=1e-7, name=None):
         unit_vector = s / safe_norm
         return squash_factor * unit_vector
 
-#apply this function to get the output  ui  of each primary capsules  i
+#function to get the output  ui  of each primary capsules  i
 caps1_output = squash(caps1_raw, name="caps1_output")
 
 #Digit Capsules
-#compute the predicted output vectors (one for each primary / digit capsule pair). Then we can run the routing by agreement algorithm
+#compute the predicted output vectors (one for each primary / digit capsule pair). Then run the routing by agreement algorithm
 #The digit capsule layer contains 10 capsules (one for each digit) of 16 dimensions each
 caps2_n_caps = 10
 caps2_n_dims = 16
@@ -103,10 +97,9 @@ W = tf.Variable(W_init, name="W")
 batch_size = tf.shape(X)[0]
 W_tiled = tf.tile(W, [batch_size, 1, 1, 1, 1], name="W_tiled") #create the first array by repeating W once per instance
 
-#That's it! On to the second array, now. As discussed earlier, we need to create an array of shape 
-# (batch size, 1152, 10, 8, 1), containing the output of the first layer capsules, repeated 10 times
+# (batch size, 1152, 10, 8, 1)
 # (once per digit, along the third dimension, which is axis=2). The caps1_output array has a shape of 
-# (batch size, 1152, 8), so we first need to expand it twice, to get an array of shape (batch size, 
+# (batch size, 1152, 8), need to expand it twice, to get an array of shape (batch size, 
 # 1152, 1, 8, 1), then we can repeat it 10 times along the third dimension:
 caps1_output_expanded = tf.expand_dims(caps1_output, -1,
                                        name="caps1_output_expanded")
