@@ -50,8 +50,6 @@ def predict_image(preprocessed_digits):
             wleft = int(round(((28 - nwidth) / 2), 0))  # caculate vertical pozition
             newImage.paste(img, (wleft, 4))  # paste resized image on white canvas
 
-        # newImage.save("sample.png
-
         tv = list(newImage.getdata())  # get pixel values
 
         # normalize pixels to 0 and 1. 0 is pure white, 1 is pure black.
